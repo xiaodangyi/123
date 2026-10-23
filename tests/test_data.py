@@ -1,13 +1,27 @@
 """验证训练数据进入模型前必须满足的边界条件。"""
 
 import unittest
+from pathlib import Path
+import tempfile
 
-from deskvision.audit_data import (apply_reviews, compare_reviewed_records,
+from deskvision.audit_data import (apply_reviews, compare_reviewed_records, exported_label_files,
                                   require_training_ready, reviewed_label_sha256)
 from deskvision.data import openimages_boxes, require_isolated, validate_box
 
 
 class TrainingDataContractTests(unittest.TestCase):
+    def test_only_known_yolo_split_caches_are_excluded_from_label_inventory(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            labels = root / 'labels'
+            (labels / 'train').mkdir(parents=True)
+            for name in ('train.cache', 'val.cache', 'test.cache', 'unknown.cache', 'extra.txt', 'train/extra.cache'):
+                (labels / name).touch()
+            self.assertEqual(exported_label_files(root), {
+                (labels / 'unknown.cache').resolve(), (labels / 'extra.txt').resolve(),
+                (labels / 'train/extra.cache').resolve(),
+            })
+
     def test_invalid_classes_coordinates_and_empty_boxes_are_rejected(self):
         for row in (
             [8, 0.5, 0.5, 0.2, 0.2],

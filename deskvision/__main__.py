@@ -11,7 +11,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from .config import ROOT, load_categories, local_weights
-from .detector import BaselineDetector, file_sha256, read_image
+from .detector import BaselineDetector, TrainedDetector, file_sha256, read_image
 from .render import find_font, render_result
 
 
@@ -36,8 +36,9 @@ def main() -> int:
     parser._optionals.title = '可选参数'
     parser.add_argument('-h', '--help', action='help', help='显示帮助并退出')
     parser.add_argument('--image', required=True, help='输入图片路径，支持中文和空格')
-    parser.add_argument('--weights', help='已有 COCO .pt 权重路径；默认读取本机配置')
-    parser.add_argument('--output', default=str(ROOT / 'runs/baseline'), help='输出根目录，每次创建独立子目录')
+    parser.add_argument('--mode', choices=['baseline', 'finetuned'], default='baseline', help='COCO 基线或八类微调权重，默认 baseline')
+    parser.add_argument('--weights', help='已有 .pt 权重路径；微调模式必须显式指定')
+    parser.add_argument('--output', help='输出根目录，每次创建独立子目录；默认按模式存入 runs')
     parser.add_argument('--conf', type=probability, default=0.25, help='检测分数阈值，默认 0.25')
     parser.add_argument('--iou', type=probability, default=0.7, help='跨类别重复框抑制阈值，默认 0.7')
     parser.add_argument('--imgsz', type=image_size, default=640, help='模型输入尺寸，默认 640')
@@ -50,11 +51,14 @@ def main() -> int:
         started = perf_counter()
         image = read_image(source)
         decode_ms = (perf_counter() - started) * 1000
+        if args.mode == 'finetuned' and not args.weights:
+            raise ValueError('微调模式必须通过 --weights 显式选择八类权重。')
         weights = local_weights(args.weights)
         categories = load_categories()
         font_path = find_font(args.font)
         print('正在读取已有权重并执行检测；此命令不训练、不下载模型。', flush=True)
-        detector = BaselineDetector(weights, categories, args.device)
+        detector_type = TrainedDetector if args.mode == 'finetuned' else BaselineDetector
+        detector = detector_type(weights, categories, args.device)
         report = detector.predict(image, args.conf, args.iou, args.imgsz)
         timestamp = datetime.now(ZoneInfo('Asia/Shanghai'))
         report['created_at'] = timestamp.isoformat()
@@ -66,7 +70,8 @@ def main() -> int:
         }
         report['timings_ms']['image_decode'] = round(decode_ms, 3)
         visualization = render_result(image, report, font_path)
-        run_dir = Path(args.output).expanduser().resolve() / f"{timestamp:%Y%m%d-%H%M%S}-{uuid4().hex[:8]}"
+        output_root = Path(args.output).expanduser().resolve() if args.output else ROOT / 'runs' / args.mode
+        run_dir = output_root / f"{timestamp:%Y%m%d-%H%M%S}-{uuid4().hex[:8]}"
         run_dir.mkdir(parents=True, exist_ok=False)
         report['artifacts'] = {'visualization': 'annotated.png', 'result': 'result.json'}
         visualization.save(run_dir / 'annotated.png')

@@ -1,10 +1,8 @@
 {
   "schema_version": 1,
   "reviewer": "本次开发中的逐图视觉复核",
-  "training_ready": false,
-  "training_blockers": [
-    "杯子、瓶子、书、橡皮和螺丝刀样本较少；五金目前只有透明袋场景，尚需补充多场景桌面照片及确认的负样本。"
-  ],
+  "training_ready": true,
+  "training_blockers": [],
   "source_decisions": {
     "fasteners": {
       "status": "quarantined",
@@ -2741,5 +2739,14 @@
         ]
       ]
     }
+  },
+  "generalization_limitations": [
+    "杯子、瓶子、书、橡皮和螺丝刀样本较少；五金目前只有透明袋场景，尚需补充多场景桌面照片及确认的负样本。"
+  ],
+  "training_scope": {
+    "purpose": "three_epoch_pilot",
+    "maximum_epochs": 3,
+    "authorization": "用户于 2026-10-23 明确要求“现在开始第四阶段”；仅批准当前 64 张复核样本的三轮训练链路试跑。",
+    "note": "图像与标签复核已通过；桌面场景、负样本和样本量缺口继续保留，不表示正式训练或泛化验收就绪。"
   }
 }

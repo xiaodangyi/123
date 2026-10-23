@@ -15,8 +15,15 @@ $workspaceRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $workspaceRoot
 . (Join-Path $PSScriptRoot 'activate-ai-cuda.ps1')
 $env:DESKVISION_VISIBLE_TRAINING = '1'
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $OutputEncoding
+$terminalLogFolder = Join-Path $workspaceRoot 'runs\training-terminal'
+New-Item -ItemType Directory -Path $terminalLogFolder -Force | Out-Null
+$terminalLogPath = Join-Path $terminalLogFolder ((Get-Date -Format 'yyyyMMdd-HHmmss') + '.txt')
+Start-Transcript -Path $terminalLogPath
 Write-Host '即将执行：python -m deskvision.train --run'
-python -m deskvision.train --run
+python -u -m deskvision.train --run
 if ($LASTEXITCODE -ne 0) {
     Write-Host "训练进程退出代码：$LASTEXITCODE" -ForegroundColor Red
 }
+Stop-Transcript

@@ -6,10 +6,21 @@ from unittest.mock import patch
 
 import yaml
 
-from deskvision.train import TRAIN_CONFIG, load_training_config, preflight, run_training
+from deskvision.train import (TRAIN_CONFIG, load_training_config, preflight,
+                              record_epoch_result, run_training)
 
 
 class TrainingEntryTests(unittest.TestCase):
+    def test_best_checkpoint_validation_does_not_add_a_training_epoch(self):
+        state = {'epochs': []}
+        row = {'epoch': 3, 'train_loss': [1, 2, 3], 'validation_metrics': {'map': .1}}
+        self.assertTrue(record_epoch_result(state, row))
+        final = dict(row, validation_metrics={'map': .2})
+        self.assertFalse(record_epoch_result(state, final))
+        self.assertEqual(len(state['epochs']), 1)
+        self.assertEqual(state['epochs'][0]['validation_metrics'], {'map': .1})
+        self.assertEqual(state['best_checkpoint_validation_metrics'], {'map': .2})
+
     def test_pilot_config_rejects_invalid_or_unreviewed_parameters(self):
         original = yaml.safe_load(TRAIN_CONFIG.read_text(encoding='utf-8'))
         load_training_config()

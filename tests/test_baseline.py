@@ -23,6 +23,15 @@ class BaselineContractTests(unittest.TestCase):
         self.assertEqual([item['count'] for item in report['summary']], [0, 0, 0, None, None, None, None, None])
         self.assertEqual(report['summary'][3]['status'], 'not_trained')
 
+    def test_finetuned_ids_are_project_ids_and_all_classes_have_counts(self):
+        report = make_report(self.categories, [[1, 2, 30, 40, .9, 6]], 640, 480, class_space='desk8')
+        self.assertEqual(report['detections'][0]['category_name'], '螺母')
+        self.assertEqual([item['count'] for item in report['summary']], [0, 0, 0, 0, 0, 0, 1, 0])
+        empty = make_report(self.categories, [], 640, 480, class_space='desk8')
+        self.assertTrue(all(item['count'] == 0 for item in empty['summary']))
+        with self.assertRaises(ValueError):
+            make_report(self.categories, [[1, 2, 30, 40, .9, 41]], 640, 480, class_space='desk8')
+
     def test_source_ids_map_to_project_ids_without_losing_precision(self):
         report = make_report(self.categories, [
             [10.125, 20.5, 50.875, 80.75, 0.9, 41],

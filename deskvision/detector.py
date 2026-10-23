@@ -1,4 +1,4 @@
-"""使用已有 YOLOv8 COCO 权重进行检测，输出原图坐标和明确的类别状态。"""
+"""区分 COCO 基线和八类微调权重，输出原图坐标和明确的类别状态。"""
 
 from hashlib import sha256
 import math
@@ -34,9 +34,14 @@ def read_image(path: Path) -> np.ndarray:
 
 def make_report(
     categories: list[Category], rows: list[list[float]], width: int, height: int,
+    *, class_space: str = 'coco',
 ) -> dict:
     """转换原图像素框；未训练类用空值表示，不能伪造零计数。"""
-    mapping = {item.coco_id: item for item in categories if item.coco_id is not None}
+    if class_space not in ('coco', 'desk8'):
+        raise ValueError('未知的权重类别体系。')
+    custom = class_space == 'desk8'
+    mapping = ({item.id: item for item in categories} if custom else
+               {item.coco_id: item for item in categories if item.coco_id is not None})
     counts = {item.id: 0 for item in categories}
     detections = []
     for x1, y1, x2, y2, confidence, source_id in rows:
@@ -60,14 +65,14 @@ def make_report(
         })
     summary = []
     for category in categories:
-        supported = category.coco_id is not None
+        supported = custom or category.coco_id is not None
         summary.append({
             'category_id': category.id, 'category_name': category.name,
             'status': 'supported' if supported else 'not_trained',
-            'status_text': '基线支持' if supported else '尚未训练',
+            'status_text': '已微调，待验收' if custom else ('基线支持' if supported else '尚未训练'),
             'count': counts[category.id] if supported else None,
         })
-    return {
+    report = {
         'schema_version': 1, 'status': 'ok',
         'coordinate_system': '原图像素坐标，左上角为原点，xyxy',
         'image_size': {'width': width, 'height': height},
@@ -76,12 +81,18 @@ def make_report(
         'message': '未检出基线支持的目标；不代表图中没有其他物品。' if not detections
                    else '结果只覆盖预训练支持的三类，需人工核对漏检和误检。',
     }
+    if custom:
+        report['message'] = ('未检出八类目标，请核对漏检。' if not detections else
+                             '八类试跑权重输出，尚未通过识别效果验收，请人工核对。')
+    return report
 
 
-class BaselineDetector:
-    """只承载预训练基线；拒绝把自定义八类权重当作 COCO 编号解释。"""
+class YoloDetector:
+    """共享读权重和预测流程，显式校验来源字典，避免八类与 COCO 编号混用。"""
 
-    def __init__(self, weights: Path, categories: list[Category], device: str = 'auto'):
+    def __init__(self, weights: Path, categories: list[Category], device: str = 'auto', *, class_space='coco'):
+        if class_space not in ('coco', 'desk8'):
+            raise ValueError('未知的权重类别体系。')
         os.environ.setdefault('YOLO_CONFIG_DIR', str(ROOT / 'environment/ultralytics-settings'))
         os.environ.setdefault('MPLCONFIGDIR', str(ROOT / 'environment/matplotlib-cache'))
         os.environ['YOLO_OFFLINE'] = 'true'
@@ -95,12 +106,17 @@ class BaselineDetector:
             raise RuntimeError('已指定 GPU，但 CUDA 不可用；请先检查环境或选择 --device cpu。')
         started = perf_counter()
         self.model = YOLO(str(weights), task='detect')
-        for category in categories:
-            if category.coco_id is not None and self.model.names.get(category.coco_id) != category.key:
-                raise ValueError('权重类别不是预期的 COCO 字典；此阶段仅支持 YOLOv8 COCO 检测权重。')
+        if class_space == 'desk8':
+            if self.model.names != {item.id: item.key for item in categories}:
+                raise ValueError('微调权重的八类名称或编号与项目配置不一致。')
+        else:
+            for category in categories:
+                if category.coco_id is not None and self.model.names.get(category.coco_id) != category.key:
+                    raise ValueError('权重类别不是预期的 COCO 字典；请选择八类微调模式或正确权重。')
         self.model.to(device)
         self.load_ms = (perf_counter() - started) * 1000
         self.categories = categories
+        self.class_space = class_space
         self.device = device
         self.weights = weights
         self.weights_hash = file_sha256(weights)
@@ -111,14 +127,16 @@ class BaselineDetector:
         started = perf_counter()
         result = self.model.predict(
             source=image, device=self.device, imgsz=image_size, conf=confidence, iou=iou,
-            classes=[item.coco_id for item in self.categories if item.coco_id is not None],
+            classes=([item.id for item in self.categories] if self.class_space == 'desk8' else
+                     [item.coco_id for item in self.categories if item.coco_id is not None]),
             agnostic_nms=True, max_det=300, half=False, augment=False, save=False, verbose=False,
         )[0]
         rows = result.boxes.data.detach().cpu().tolist() if result.boxes is not None else []
         elapsed = (perf_counter() - started) * 1000
-        report = make_report(self.categories, rows, image.shape[1], image.shape[0])
+        report = make_report(self.categories, rows, image.shape[1], image.shape[0], class_space=self.class_space)
         report['model'] = {
-            'route': 'yolov8_coco_baseline', 'weights_name': self.weights.name,
+            'route': 'yolov8_desk8_finetuned' if self.class_space == 'desk8' else 'yolov8_coco_baseline',
+            'weights_name': self.weights.name,
             'weights_sha256': self.weights_hash, 'device': self.device, 'gpu_name': self.gpu_name,
         }
         report['parameters'] = {
@@ -134,3 +152,17 @@ class BaselineDetector:
         }
         report['timing_note'] = '单张调用耗时，首张包含推理器初始化与预热；不能视为稳定吞吐率。'
         return report
+
+
+class BaselineDetector(YoloDetector):
+    """保留已有基线接口，始终按 COCO 类别字典解释。"""
+
+    def __init__(self, weights: Path, categories: list[Category], device: str = 'auto'):
+        super().__init__(weights, categories, device, class_space='coco')
+
+
+class TrainedDetector(YoloDetector):
+    """八类权重使用项目编号，训练过不等于效果已验收。"""
+
+    def __init__(self, weights: Path, categories: list[Category], device: str = 'auto'):
+        super().__init__(weights, categories, device, class_space='desk8')

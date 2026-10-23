@@ -281,6 +281,13 @@ def compare_reviewed_records(exported, approved):
             raise ValueError('导出标签与当前复核不一致：' + record['id'])
 
 
+def exported_label_files(destination):
+    """YOLO 会在 labels 根目录生成三个划分缓存，它们不是实例标注。"""
+    folder = destination / 'labels'
+    caches = {folder / (split + '.cache') for split in SPLITS}
+    return {path.resolve() for path in folder.rglob('*') if path.is_file() and path not in caches}
+
+
 def validate_export(destination, *, require_ready=True):
     """从导出目录独立核对清单、文件哈希、标签解析和类别覆盖。"""
     manifest_path = destination / 'manifest.json'
@@ -324,7 +331,7 @@ def validate_export(destination, *, require_ready=True):
         listed_images.add(image.resolve())
         listed_labels.add(label.resolve())
     actual_images = {p.resolve() for p in (destination / 'images').rglob('*') if p.is_file()}
-    actual_labels = {p.resolve() for p in (destination / 'labels').rglob('*') if p.is_file()}
+    actual_labels = exported_label_files(destination)
     if actual_images != listed_images or actual_labels != listed_labels:
         raise ValueError('导出目录包含未登记或缺失的图像/标签文件。')
     yaml_path = destination / 'data.yaml'
@@ -387,6 +394,8 @@ def main():
             'candidate_manifest_sha256': sha256(MANIFEST),
             'review_sha256': sha256(REVIEW),
             'training_ready': review['training_ready'],
+            'training_scope': review.get('training_scope'),
+            'generalization_limitations': review.get('generalization_limitations', []),
             'training_blockers': review.get('training_blockers', []),
             'candidate_images': len(records),
             'source_decisions': review.get('source_decisions', {}),

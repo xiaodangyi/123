@@ -50,8 +50,9 @@ def render_result(image_bgr: np.ndarray, report: dict, font_path: Path) -> Image
         draw.rectangle((x, y, x + text_width + 8, y + text_height + 8), fill=color)
         draw.text((x + 4 - bounds[0], y + 4 - bounds[1]), label, font=font, fill='white')
     x = width + 20
-    draw.text((x, 20), 'YOLOv8 训练前基线', font=panel_font, fill='#152a3a')
-    draw.text((x, 56), '仅支持前三类；计数可能有误', font=small_font, fill='#586b78')
+    trained = report.get('model', {}).get('route') == 'yolov8_desk8_finetuned'
+    draw.text((x, 20), 'YOLOv8 八类微调试跑' if trained else 'YOLOv8 训练前基线', font=panel_font, fill='#152a3a')
+    draw.text((x, 56), '八类已参与训练；效果待验收' if trained else '仅支持前三类；计数可能有误', font=small_font, fill='#586b78')
     for index, item in enumerate(report['summary']):
         value = str(item['count']) if item['count'] is not None else '尚未训练'
         draw.text((x, 100 + index * 36), f"{item['category_name']}：{value}",

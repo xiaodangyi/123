@@ -17,6 +17,15 @@ from .data import read_json, save_json, sha256
 TRAIN_CONFIG = ROOT / 'configs/training.yaml'
 
 
+def record_epoch_result(state, row):
+    """Ultralytics 最后会再验证 best.pt；不将该回调当成额外训练轮。"""
+    if any(previous['epoch'] == row['epoch'] for previous in state['epochs']):
+        state['best_checkpoint_validation_metrics'] = row['validation_metrics']
+        return False
+    state['epochs'].append(row)
+    return True
+
+
 def load_training_config():
     config = yaml.safe_load(TRAIN_CONFIG.read_text(encoding='utf-8'))
     required = {'schema_version', 'dataset', 'model', 'epochs', 'image_size', 'batch_size',
@@ -86,6 +95,7 @@ def run_training(result):
     if os.environ.get('DESKVISION_VISIBLE_TRAINING') != '1':
         raise RuntimeError('训练只能由打开可见训练终端的脚本启动。')
     config, dataset, weights, device = result
+    os.environ['YOLO_OFFLINE'] = 'true'
     from ultralytics import YOLO
 
     run_name = 'desk8-pilot-' + datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -101,6 +111,9 @@ def run_training(result):
         'training_config_sha256': sha256(TRAIN_CONFIG),
         'dataset_manifest_sha256': sha256(dataset / 'manifest.json'),
         'dataset_yaml_sha256': sha256(dataset / 'data.yaml'),
+        'data_review_sha256': sha256(ROOT / 'configs/data_review.json'),
+        'training_scope': read_json(ROOT / 'configs/data_review.json').get('training_scope'),
+        'generalization_limitations': read_json(ROOT / 'configs/data_review.json').get('generalization_limitations', []),
         'weights_sha256': sha256(weights),
         'torch_version': torch.__version__,
         'cuda_version': torch.version.cuda,
@@ -119,9 +132,12 @@ def run_training(result):
             except (TypeError, ValueError):
                 continue
         row = {'epoch': trainer.epoch + 1, 'train_loss': train_loss, 'validation_metrics': metrics}
-        state['epochs'].append(row)
+        new_epoch = record_epoch_result(state, row)
         save_json(metadata_path, state)
-        print(f'本轮汇总：第 {row["epoch"]}/{config["epochs"]} 轮，loss={train_loss}，验证指标={metrics}', flush=True)
+        if new_epoch:
+            print(f'本轮汇总：第 {row["epoch"]}/{config["epochs"]} 轮，loss={train_loss}，验证指标={metrics}', flush=True)
+        else:
+            print(f'最佳权重最终验证：{metrics}', flush=True)
 
     try:
         model = YOLO(str(weights))
