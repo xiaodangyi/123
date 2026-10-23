@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-COLORS = ((24, 112, 191), (18, 130, 95), (160, 75, 30))
+COLORS = ((24, 112, 191), (18, 130, 95), (160, 75, 30), (170, 65, 175),
+          (40, 145, 160), (220, 100, 25), (75, 90, 215), (20, 155, 125))
 
 
 def find_font(override: str | None) -> Path:
@@ -62,4 +63,34 @@ def render_result(image_bgr: np.ndarray, report: dict, font_path: Path) -> Image
     draw.text((x, 448), '原图区域坐标不变，请人工核对', font=small_font, fill='#586b78')
     if not report['detections']:
         draw.text((x, 476), '本图未检出支持类别', font=small_font, fill='#a24820')
+    return canvas
+
+
+def render_segmentation(image_bgr: np.ndarray, report: dict, root: Path, font_path: Path) -> Image.Image:
+    """逐掩膜叠加并描边，孔洞由原始二值 PNG 保留；不合并重叠实例。"""
+    overlay = image_bgr.copy()
+    h, w = image_bgr.shape[:2]
+    for instance in report['segmentation']['instances']:
+        path = (root / instance['mask_file']).resolve()
+        if not path.is_relative_to(root.resolve()):
+            raise ValueError('掩膜文件路径越过结果目录。')
+        with Image.open(path) as source:
+            mask = np.asarray(source.convert('L')) == 255
+        if mask.shape != (h, w):
+            raise ValueError('渲染掩膜与原图尺寸不一致。')
+        color_bgr = COLORS[instance['category_id'] % len(COLORS)][::-1]
+        overlay[mask] = np.round(overlay[mask] * .65 + np.array(color_bgr) * .35).astype(np.uint8)
+        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(overlay, contours, -1, color_bgr, 2)
+    canvas = render_result(overlay, report, font_path)
+    draw = ImageDraw.Draw(canvas)
+    draw.rectangle((w, 0, w + 340, 90), fill='#f2f5f8')
+    draw.text((w + 20, 20), 'YOLOv8 + SAM 2 分割',
+              font=ImageFont.truetype(str(font_path), 19), fill='#152a3a')
+    draw.text((w + 20, 56), '分类计数沿用检测；颜色显示掩膜',
+              font=ImageFont.truetype(str(font_path), 15), fill='#586b78')
+    info = report['segmentation']
+    if report['detections']:
+        draw.text((w + 20, 476), f'非空掩膜 {info["nonempty_masks"]}；空掩膜 {info["empty_masks"]}',
+                  font=ImageFont.truetype(str(font_path), 15), fill='#586b78')
     return canvas

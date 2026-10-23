@@ -37,13 +37,22 @@ def load_categories(path: Path = ROOT / 'configs/classes.yaml') -> list[Category
 
 def local_weights(override: str | None) -> Path:
     """只接受已有权重文件，禁止把模型名称当作自动下载请求。"""
+    return _local_weights(override, 'yolo_weights')
+
+
+def local_sam2_weights(override: str | None) -> Path:
+    """SAM 2.1 tiny 复用本机权重，配置 YAML 随已安装的 sam2 包提供。"""
+    return _local_weights(override, 'sam2_weights')
+
+
+def _local_weights(override: str | None, key: str) -> Path:
     if override is None:
         config_path = ROOT / '.local/config.json'
         if not config_path.is_file():
-            raise FileNotFoundError('请配置 .local/config.json 的 yolo_weights，或传入 --weights。')
-        override = json.loads(config_path.read_text(encoding='utf-8-sig')).get('yolo_weights')
+            raise FileNotFoundError(f'请配置 .local/config.json 的 {key}，或显式指定权重路径。')
+        override = json.loads(config_path.read_text(encoding='utf-8-sig')).get(key)
     if not isinstance(override, str) or not override.strip():
-        raise ValueError('缺少有效的 YOLO 权重路径。')
+        raise ValueError(f'缺少有效的 {key} 权重路径。')
     path = Path(override).expanduser()
     path = (path if path.is_absolute() else ROOT / path).resolve()
     if path.suffix.lower() != '.pt' or not path.is_file():

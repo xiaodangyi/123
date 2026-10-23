@@ -70,7 +70,7 @@ python .\environment\verify_project.py
 
 ## 下一步
 
-本地 YOLOv8 检测/训练、SAM 2 分割以及界面开发可以开始。正式桌面物品数据集尚待选定、整理和标注。多模态模型的服务、模型名、API 配置和额度尚未选择，也未进行云端调用。
+已完成八类小数据集长训练和 YOLOv8 → SAM 2 分割串联，运行方式见 [第五阶段说明](../docs/第五阶段分割说明.md)。当前数据与真实桌面泛化仍有缺口。多模态模型的服务、模型名、API 配置和额度尚未选择，也未进行云端调用；第六阶段再配置。
 
 没有安装 Grounding DINO、Florence-2、DDS、Docker 或 TorchAudio，因为当前路线是 YOLOv8 + SAM 2。
 
