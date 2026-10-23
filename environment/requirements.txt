@@ -14,5 +14,8 @@ python-dotenv==1.2.1
 tzdata
 # 脚本直接读取 YAML 配置，显式声明依赖。
 PyYAML==6.0.3
+# 数据准备器直接使用 requests 与 urllib3 重试策略。
+requests==2.34.2
+urllib3==2.8.0
 # SAM 2 按环境说明从下列官方固定提交单独安装：
 # https://github.com/facebookresearch/sam2/commit/2b90b9f5ceec907a1c18123530e92e794ad901a4

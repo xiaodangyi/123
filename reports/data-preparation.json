@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "candidate_manifest_sha256": "71238713ada65e717b955a9fdceedd6e5611c63c11570f078e8681763b1ea53d",
+  "review_sha256": "79cf992ee8481bd1470f030fcc80a451924a55e70b94881ddb78677c19b5d389",
+  "training_ready": false,
+  "training_blockers": [
+    "杯子、瓶子、书、橡皮和螺丝刀样本较少；五金目前只有透明袋场景，尚需补充多场景桌面照片及确认的负样本。"
+  ],
+  "candidate_images": 554,
+  "source_decisions": {
+    "fasteners": {
+      "status": "quarantined",
+      "note": "抽查联系表首9张后发现缺少真实螺纹且部分物体难辨；整批300张不进入当前数据集，未声称逐张复核。"
+    }
+  },
+  "approved": {
+    "images": 64,
+    "source_images": {
+      "loco": 20,
+      "openimages": 44
+    },
+    "split_images": {
+      "test": 9,
+      "train": 42,
+      "val": 13
+    },
+    "classes": [
+      {
+        "id": 0,
+        "name": "杯子",
+        "train": {
+          "images": 5,
+          "instances": 6,
+          "real_images": 5
+        },
+        "val": {
+          "images": 3,
+          "instances": 4,
+          "real_images": 3
+        },
+        "test": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 1,
+        "name": "瓶子",
+        "train": {
+          "images": 7,
+          "instances": 10,
+          "real_images": 7
+        },
+        "val": {
+          "images": 3,
+          "instances": 3,
+          "real_images": 3
+        },
+        "test": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 2,
+        "name": "书",
+        "train": {
+          "images": 5,
+          "instances": 5,
+          "real_images": 5
+        },
+        "val": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "test": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 3,
+        "name": "橡皮",
+        "train": {
+          "images": 5,
+          "instances": 6,
+          "real_images": 5
+        },
+        "val": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "test": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 4,
+        "name": "螺丝刀",
+        "train": {
+          "images": 9,
+          "instances": 10,
+          "real_images": 9
+        },
+        "val": {
+          "images": 2,
+          "instances": 2,
+          "real_images": 2
+        },
+        "test": {
+          "images": 1,
+          "instances": 1,
+          "real_images": 1
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 5,
+        "name": "螺丝",
+        "train": {
+          "images": 12,
+          "instances": 24,
+          "real_images": 12
+        },
+        "val": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "test": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 6,
+        "name": "螺母",
+        "train": {
+          "images": 12,
+          "instances": 24,
+          "real_images": 12
+        },
+        "val": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "test": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "short_side_under_16_at_640": 0
+      },
+      {
+        "id": 7,
+        "name": "垫圈",
+        "train": {
+          "images": 12,
+          "instances": 24,
+          "real_images": 12
+        },
+        "val": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "test": {
+          "images": 4,
+          "instances": 8,
+          "real_images": 4
+        },
+        "short_side_under_16_at_640": 0
+      }
+    ]
+  },
+  "approved_cross_split_similarity_candidates": []
+}
