@@ -7,7 +7,7 @@ from unittest.mock import patch
 import yaml
 
 from deskvision.train import (TRAIN_CONFIG, load_training_config, preflight,
-                              record_epoch_result, run_training)
+                              record_epoch_result, run_training, training_scope)
 
 
 class TrainingEntryTests(unittest.TestCase):
@@ -44,6 +44,26 @@ class TrainingEntryTests(unittest.TestCase):
         with patch.dict('os.environ', {}, clear=True):
             with self.assertRaisesRegex(RuntimeError, '可见训练终端'):
                 run_training(None)
+
+    def test_full_training_is_explicit_and_does_not_change_pilot_scope(self):
+        original = yaml.safe_load(TRAIN_CONFIG.read_text(encoding='utf-8'))
+        formal = load_training_config(TRAIN_CONFIG.with_name('training-full.yaml'))
+        review = {'training_scope': {'purpose': 'three_epoch_pilot', 'maximum_epochs': 3}}
+        self.assertEqual(training_scope(original, review)['maximum_epochs'], 3)
+        self.assertEqual(training_scope(formal, review)['maximum_epochs'], 100)
+        self.assertEqual(review['training_scope']['maximum_epochs'], 3)
+        changed = dict(original, epochs=100)
+        with self.assertRaisesRegex(ValueError, '超过原复核范围'):
+            training_scope(changed, review)
+
+    def test_full_training_rejects_missing_authorization_or_unbound_dataset(self):
+        formal = load_training_config(TRAIN_CONFIG.with_name('training-full.yaml'))
+        for key, value in (('authorization', ''), ('dataset_manifest_sha256', ''),
+                           ('patience', 0), ('epochs', 1000)):
+            changed = dict(formal, **{key: value})
+            with self.subTest(key=key), patch('deskvision.train.yaml.safe_load', return_value=changed):
+                with self.assertRaises(ValueError):
+                    load_training_config()
 
 
 if __name__ == '__main__':

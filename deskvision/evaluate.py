@@ -1,4 +1,4 @@
-"""核验已完成试跑的最佳权重，只在验证集导出指标，不触碰独立测试集。"""
+"""核验已完成训练的最佳权重，只在验证集导出指标，不触碰独立测试集。"""
 
 import argparse
 import csv
@@ -12,12 +12,14 @@ from .detector import TrainedDetector
 
 
 def evaluate(run_name):
-    if not re.fullmatch(r'desk8-pilot-[0-9]{8}-[0-9]{6}', run_name):
-        raise ValueError('请选择已有的 desk8-pilot-日期-时间 运行标识。')
+    if not re.fullmatch(r'desk8-(pilot|full)-[0-9]{8}-[0-9]{6}', run_name):
+        raise ValueError('请选择已有的 desk8-pilot 或 desk8-full 运行标识。')
     metadata_path = ROOT / 'runs/train-metadata' / (run_name + '.json')
     state = read_json(metadata_path)
-    if state['status'] != 'completed' or len(state['epochs']) != 3:
-        raise ValueError('只能评估完成三轮并记录完整的试跑。')
+    count = len(state['epochs'])
+    if (state['status'] != 'completed' or not 0 < count <= state['training_config']['epochs']
+            or [row['epoch'] for row in state['epochs']] != list(range(1, count + 1))):
+        raise ValueError('只能评估训练完成且逐轮记录完整的运行。')
     dataset = resolve_data_path(state['training_config']['dataset'])
     validate_export(dataset)
     if sha256(dataset / 'manifest.json') != state['dataset_manifest_sha256']:
@@ -26,7 +28,7 @@ def evaluate(run_name):
     weights = run_dir / 'weights/best.pt'
     last_weights = run_dir / 'weights/last.pt'
     if not weights.is_file() or not last_weights.is_file():
-        raise FileNotFoundError('试跑缺少最佳或最后权重。')
+        raise FileNotFoundError('训练缺少最佳或最后权重。')
     categories = load_categories()
     detector = TrainedDetector(weights, categories, 'cuda:0')
     os.environ['YOLO_OFFLINE'] = 'true'
@@ -40,7 +42,8 @@ def evaluate(run_name):
         epochs = [{key: float(value) for key, value in row.items()} for row in csv.DictReader(stream)]
     validation_records = [row for row in read_json(dataset / 'manifest.json')['records'] if row['split'] == 'val']
     report = {
-        'schema_version': 1, 'run_name': run_name, 'purpose': '三轮链路试跑后的验证，不是最终验收',
+        'schema_version': 1, 'run_name': run_name,
+        'purpose': '长训练后的独立验证，不是最终桌面验收' if run_name.startswith('desk8-full-') else '三轮链路试跑后的验证，不是最终验收',
         'split': 'val', 'test_evaluated': False,
         'training_scope': state.get('training_scope'),
         'generalization_limitations': state.get('generalization_limitations', []),
@@ -70,7 +73,7 @@ def evaluate(run_name):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--run-name', required=True, help='已完成的三轮运行标识')
+    parser.add_argument('--run-name', required=True, help='已完成训练的运行标识，包括验证早停的长训练')
     args = parser.parse_args()
     evaluate(args.run_name)
 

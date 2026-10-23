@@ -83,7 +83,7 @@ def make_report(
     }
     if custom:
         report['message'] = ('未检出八类目标，请核对漏检。' if not detections else
-                             '八类试跑权重输出，尚未通过识别效果验收，请人工核对。')
+                             '八类微调权重输出，尚未通过识别效果验收，请人工核对。')
     return report
 
 
