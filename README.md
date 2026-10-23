@@ -2,7 +2,7 @@
 
 使用 YOLOv8 与 SAM 2 识别、清点现实桌面上的物品，让视觉大模型独立处理同一原图，比较两条路线。
 
-当前为第 1 阶段：需求、分类规则、仓库与环境整理。尚未实现识别页面，尚未下载正式数据集或开展项目训练。
+当前已完成第 2 阶段：YOLOv8 预训练图片检测基线。可输出中文标注图、分类计数和 JSON 记录；尚未微调、接入分割和大模型，也没有业务界面。
 
 ## 识别范围
 
@@ -32,18 +32,24 @@ YOLOv8 的 COCO 预训练模型只有杯子、瓶子、书对应类别；其余�
 | 位置 | 作用 |
 |---|---|
 | configs/ | 类别配置、本机配置模板 |
+| deskvision/ | 自主编写的检测、中文标注和命令行入口 |
 | docs/ | 验收、路线、标注与阶段记录 |
 | environment/ | 环境说明、激活与检查 |
 | notes/ | 参考项目与数据来源研究 |
 | models/、data/、runs/ | 本地权重、数据、运行产物，默认不入库 |
 | .local/ | 本机配置，默认不入库 |
+| tests/、reports/ | 关键行为检查与可追溯的基线记录 |
 
 本机已准备 .local/config.json；其他机器参考 configs/local.example.json 填写路径，然后运行：
 
     . .\environment\activate-ai-cuda.ps1
     python .\environment\verify_project.py
 
-环境复现方式见 [环境说明](environment/README.md)。以上命令只检查准备状态，不训练、不下载。当前没有业务界面。
+环境复现方式见 [环境说明](environment/README.md)。以上命令只检查准备状态。检测自己的照片：
+
+    python -m deskvision --image 'D:\你的图片\桌面照片.jpg'
+
+每次结果保存在 runs/baseline 的独立子目录。工具只读取已有权重，不训练、不下载；详细参数、输出和当前错误见 [基线使用说明](docs/基线使用说明.md)。
 
 ## 验收与过程
 
