@@ -93,3 +93,11 @@ python -m pip check
 加载环境后，`python environment/verify_environment.py` 会检查 GPU 运算并执行已有图片的 YOLOv8 到 SAM 2 推理，不训练。`python environment/verify_training.py` 会复制本机 COCO8 并做一轮训练自检；必须先打开可见终端让用户看到进度。第 1 阶段没有执行该训练脚本。正式项目训练另在第 4 阶段实现。
 
 脚本生成的 JSON、训练副本和日志默认忽略，不入库。仓库只保存复现说明和脚本；本地路径、旧安装快照、权重及缓存均不上传。
+
+## 第八阶段验收环境
+
+第八阶段复用本机环境、权重和数据，没有新增依赖或训练。固定九图实验的精确依赖版本、权重和源码哈希见 `reports/stage8-protocol.json`；已有结果可用 `python -m deskvision.acceptance summarize` 离线核查，不需要再发API请求。完整恢复边界见 [验收与复现指南](../docs/验收与复现指南.md)。
+
+演示素材使用本机已有FFmpeg 8.1.2、Pillow和OpenCV制作并解码检查。`python -m environment.create_acceptance_media` 只使用已有浏览器截图和实验产物生成截图序列视频，不运行模型或联网；FFmpeg不是识别功能的依赖，新机器仅在重新编码视频时需要。截图须先存在 `runs/stage8-demo/`，此脚本不伪造浏览器操作。
+
+`python -m environment.package_acceptance` 在原工作区离线打包验收证据，逐项校验协议、文件哈希、ZIP完整性和本地密钥排除；产物及整包指纹位于忽略的 `runs/delivery/`。无需安装打包依赖；完整训练集与Python环境不在交付包内。
