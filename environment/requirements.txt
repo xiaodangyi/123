@@ -10,6 +10,7 @@ tqdm>=4.66.1,<5
 pycocotools==2.0.10
 gradio==5.49.1
 openai==2.16.0
+httpx==0.28.1
 python-dotenv==1.2.1
 tzdata
 # 脚本直接读取 YAML 配置，显式声明依赖。

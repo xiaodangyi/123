@@ -70,7 +70,7 @@ python .\environment\verify_project.py
 
 ## 下一步
 
-已完成八类小数据集长训练和 YOLOv8 → SAM 2 分割串联，运行方式见 [第五阶段说明](../docs/第五阶段分割说明.md)。当前数据与真实桌面泛化仍有缺口。多模态模型的服务、模型名、API 配置和额度尚未选择，也未进行云端调用；第六阶段再配置。
+已完成八类小数据集长训练和 YOLOv8 → SAM 2 分割串联，运行方式见 [第五阶段说明](../docs/第五阶段分割说明.md)。当前数据与真实桌面泛化仍有缺口。第六阶段另用已有 OpenAI SDK 2.16.0 和 httpx 0.28.1 接入 DeepSeek deepseek-flash，已完成两张验证图云端调用；参数、密钥位置与独立入口见 [第六阶段说明](../docs/第六阶段视觉大模型说明.md)。本机无需重装依赖，第七阶段再整合界面。
 
 没有安装 Grounding DINO、Florence-2、DDS、Docker 或 TorchAudio，因为当前路线是 YOLOv8 + SAM 2。
 

@@ -4,6 +4,8 @@
 
 第 4 阶段长训练已完成，最佳权重验证 mAP50 为 0.98469；默认阈值下 13 张验证图中 8 张计数完全正确，仍有杯瓶混淆和多检。第 5 阶段已串联 YOLOv8 与 SAM 2，支持原尺寸实例掩膜、轮廓、空结果和失败记录，详见 [第五阶段说明](docs/第五阶段分割说明.md)。当前 64 张复核数据仍缺真实桌面场景与负样本，不能据此宣布实际识别效果合格。
 
+第 6 阶段已接入 DeepSeek `deepseek-flash`，只读取原图、独立返回八类清单和数量；两张验证图的真实 API 请求通过，见 [第六阶段说明](docs/第六阶段视觉大模型说明.md)。第 7 阶段再用 Gradio 统一操作和展示，两路识别保持独立。
+
 ## 识别范围
 
 首版共八类：杯子、瓶子、书、橡皮、螺丝刀、螺丝、螺母、垫圈。范围和编号见 [标注规范](docs/标注规范.md) 与 [类别配置](configs/classes.yaml)。
@@ -17,6 +19,8 @@ YOLOv8 的 COCO 预训练模型只有杯子、瓶子、书对应类别；其余�
 - 最后对照人工真值，并排比较两路结果。
 
 不将 YOLO 结果提前提供给大模型。检测置信度与掩膜质量分别保存；计数按有效检测实例进行。SAM 2 细化已有框内的轮廓，不保证修复漏检。
+
+大模型也不参与 YOLO 训练或纠正第一路答案。它返回中文相对位置与存疑标记，不伪造像素框、置信度或分割掩膜。
 
 ## 开发约定
 
@@ -32,7 +36,7 @@ YOLOv8 的 COCO 预训练模型只有杯子、瓶子、书对应类别；其余�
 | 位置 | 作用 |
 |---|---|
 | configs/ | 类别配置、本机配置模板 |
-| deskvision/ | 自主编写的检测、SAM 2 分割、中文标注和命令行入口 |
+| deskvision/ | 自主编写的检测、SAM 2 分割、独立视觉大模型、中文标注和命令行入口 |
 | docs/ | 验收、路线、标注与阶段记录 |
 | environment/ | 环境说明、激活与检查 |
 | notes/ | 参考项目与数据来源研究 |
@@ -54,6 +58,13 @@ YOLOv8 的 COCO 预训练模型只有杯子、瓶子、书对应类别；其余�
     python -m deskvision --mode finetuned --weights runs/train/desk8-full-20261023-204546/weights/best.pt --image 'D:\你的图片\桌面照片.jpg' --segment --device cuda:0
 
 分割结果保存在 runs/segmentation 的独立子目录，包括检测图、分割图、JSON 和每实例原尺寸二值掩膜。类别和计数沿用 YOLO，分割质量分数单独保存。使用细节、验证证据和限制见 [第五阶段说明](docs/第五阶段分割说明.md)。
+
+独立视觉大模型入口如下。本机已配置 DeepSeek 密钥；其他机器需先在忽略的 `.local/deepseek.env` 中填写 `DEEPSEEK_API_KEY`，公开参数模板见 [vlm.example.json](configs/vlm.example.json)。
+
+    python -m deskvision.vlm --check-config
+    python -m deskvision.vlm --image 'D:\你的图片\桌面照片.jpg'
+
+第二条命令会将原图发送到 DeepSeek 并产生 API 用量；结果另存 runs/vlm，包括逐件清单、八类计数、用量、耗时或失败原因。不会读取 YOLO/SAM 结果，也不会自动重试；详细配置与输出约定见 [第六阶段说明](docs/第六阶段视觉大模型说明.md)。
 
 数据来源、许可、划分和当前数量见 [数据准备说明](docs/数据准备说明.md)，仍需补充的场景见 [桌面样本补充计划](docs/桌面样本补充计划.md)。第四阶段先通过可见终端完成 3 轮 GPU 小批试跑，再按用户要求长训练。启动 `environment/start-training.ps1` 会打开单独的可见 PowerShell 窗口，显示 Epoch、loss 和验证指标。日志、曲线和权重留在本机 `runs/`。
 
